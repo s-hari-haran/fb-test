@@ -10,8 +10,15 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
+const ConversationTurnSchema = z.object({
+  role: z.string().describe('The role, either "user" or "model".'),
+  content: z.string().describe('The content of the turn.'),
+});
+
 const SummarizeConversationInputSchema = z.object({
-  conversationTurns: z.array(z.string()).describe('An array of transcripts from the conversation.'),
+  conversationTurns: z
+    .array(ConversationTurnSchema)
+    .describe('An array of turns from the conversation.'),
 });
 export type SummarizeConversationInput = z.infer<typeof SummarizeConversationInputSchema>;
 
@@ -29,12 +36,12 @@ const prompt = ai.definePrompt({
   input: {schema: SummarizeConversationInputSchema},
   output: {schema: SummarizeConversationOutputSchema},
   prompt: `You are Chill Chacha, a wise and funny Indian uncle.
-Summarize the user's journal entries below into a simple, encouraging summary.
+Summarize the conversation below into a simple, encouraging summary. Make sure to capture the essence of both what the user said and what you advised.
 Keep it light, maybe add a little Hinglish wisdom. Start with something like "Arre, let's see what's on your mind..."
 
 Conversation Entries:
 {{#each conversationTurns}}
-- {{{this}}}
+**{{role}}:** {{{content}}}
 {{/each}}
 `,
 });

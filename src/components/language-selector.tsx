@@ -24,6 +24,8 @@ const languages = [
   { value: 'ko-KR', label: '한국어' },
   { value: 'zh-CN', label: '中文 (简体)' },
   { value: 'kn-IN', label: 'ಕನ್ನಡ' },
+  { value: 'ta-IN', label: 'தமிழ்' },
+  { value: 'hi-IN', label: 'हिन्दी' },
 ];
 
 export default function LanguageSelector({ selectedLanguage, onLanguageChange }: LanguageSelectorProps) {

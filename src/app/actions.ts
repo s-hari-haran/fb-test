@@ -97,12 +97,15 @@ export async function handleUserTurn({
 
 
 export async function summarizeConversationAction(conversation: Session[]) {
-  const transcripts = conversation.map((turn) => turn.audio_transcript);
-
-  if (transcripts.length === 0) {
+  if (conversation.length === 0) {
     return { summary: "There's nothing to summarize yet. Start a conversation first." };
   }
 
-  const { summary } = await summarizeConversation({ conversationTurns: transcripts });
+  const conversationTurns = conversation.flatMap(turn => [
+    { role: 'user', content: turn.audio_transcript },
+    { role: 'model', content: turn.ai_response_text },
+  ]).filter(turn => turn.content);
+
+  const { summary } = await summarizeConversation({ conversationTurns });
   return { summary };
 }

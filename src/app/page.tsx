@@ -26,6 +26,7 @@ export default function Home() {
   const { toast } = useToast();
   const conversationEndRef = useRef<HTMLDivElement>(null);
 
+  // Load deviceId, language, and response mode from local storage on initial mount
   useEffect(() => {
     let id = localStorage.getItem('chillchacha-device-id');
     if (!id) {
@@ -33,8 +34,19 @@ export default function Home() {
       localStorage.setItem('chillchacha-device-id', id);
     }
     setDeviceId(id);
+    
+    const savedLanguage = localStorage.getItem('chillchacha-language');
+    if (savedLanguage) {
+      setLanguage(savedLanguage);
+    }
+
+    const savedMode = localStorage.getItem('chillchacha-response-mode') as 'voice' | 'text' | null;
+    if (savedMode) {
+      setResponseMode(savedMode);
+    }
   }, []);
 
+  // Subscribe to Firestore for conversation updates
   useEffect(() => {
     if (deviceId) {
       const q = query(
@@ -67,9 +79,22 @@ export default function Home() {
     }
   }, [deviceId, toast]);
 
+  // Scroll to the bottom of the conversation
   useEffect(() => {
     conversationEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [conversation]);
+  
+  const handleLanguageChange = (newLanguage: string) => {
+    setLanguage(newLanguage);
+    localStorage.setItem('chillchacha-language', newLanguage);
+  };
+
+  const toggleResponseMode = () => {
+    const newMode = responseMode === 'voice' ? 'text' : 'voice';
+    setResponseMode(newMode);
+    localStorage.setItem('chillchacha-response-mode', newMode);
+  };
+
 
   const handleRecordingComplete = async (audioDataUri: string) => {
     if (!deviceId) return;
@@ -155,7 +180,7 @@ export default function Home() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setResponseMode(mode => (mode === 'voice' ? 'text' : 'voice'))}
+                onClick={toggleResponseMode}
                 aria-label={`Switch to ${responseMode === 'voice' ? 'text' : 'voice'} mode`}
                 className="w-28"
               >
@@ -164,7 +189,7 @@ export default function Home() {
               </Button>
               <div className="flex items-center gap-2">
                 <Languages className="w-5 h-5 text-muted-foreground" />
-                <LanguageSelector selectedLanguage={language} onLanguageChange={setLanguage} />
+                <LanguageSelector selectedLanguage={language} onLanguageChange={handleLanguageChange} />
               </div>
             </div>
           </header>
