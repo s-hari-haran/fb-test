@@ -6,5 +6,6 @@ export interface Session {
   timestamp: any;
   audio_transcript: string;
   detected_emotion: string;
-  AI_response: string;
+  ai_response_text: string;
+  ai_response_audio_uri?: string;
 }

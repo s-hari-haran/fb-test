@@ -2,13 +2,14 @@
 
 import { cn } from '@/lib/utils';
 import { User, Bot, Smile, Frown, Meh, Angry, Dna, Rocket } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import type { ReactNode } from 'react';
 
 type Message = {
   role: 'user' | 'ai';
   content: string | ReactNode;
+  audioUri?: string;
 };
 
 type MessageBubbleProps = {
@@ -67,6 +68,11 @@ export default function MessageBubble({ message, emotion }: MessageBubbleProps) 
                  <p className="whitespace-pre-wrap">{message.content}</p>
             ) : (
                 message.content
+            )}
+            {message.audioUri && (
+                <audio controls src={message.audioUri} className="w-full mt-3 h-10">
+                    Your browser does not support the audio element.
+                </audio>
             )}
         </CardContent>
       </Card>

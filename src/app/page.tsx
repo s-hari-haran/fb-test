@@ -51,7 +51,8 @@ export default function Home() {
             timestamp: data.timestamp?.toDate(),
             audio_transcript: data.audio_transcript,
             detected_emotion: data.detected_emotion,
-            AI_response: data.AI_response,
+            ai_response_text: data.ai_response_text,
+            ai_response_audio_uri: data.ai_response_audio_uri,
           });
         });
         setConversation(sessions);

@@ -59,9 +59,9 @@ export default function ConversationView({ conversation, isProcessing }: Convers
                 message={{ role: 'user', content: turn.audio_transcript }}
                 emotion={turn.detected_emotion}
               />
-              {turn.AI_response && (
+              {turn.ai_response_text && (
                 <MessageBubble
-                  message={{ role: 'ai', content: turn.AI_response }}
+                  message={{ role: 'ai', content: turn.ai_response_text, audioUri: turn.ai_response_audio_uri }}
                 />
               )}
             </div>
