@@ -55,15 +55,17 @@ export async function handleUserTurn({
 
   // 3. Conditionally generate audio for the response
   let aiResponseAudioUri: string | undefined = undefined;
+  let ttsError: string | null = null;
   if (responseMode === 'voice') {
       try {
-        // Clean the text for TTS: remove the "TL;DR" part and other formatting that might cause issues.
         const textForSpeech = aiResponseText.split('TL;DR:')[0].replace(/\*+/g, '').trim();
-        const { audioDataUri } = await textToSpeech({ text: textForSpeech });
-        aiResponseAudioUri = audioDataUri;
+        if (textForSpeech) {
+          const { audioDataUri } = await textToSpeech({ text: textForSpeech });
+          aiResponseAudioUri = audioDataUri;
+        }
       } catch (e) {
         console.error("Text-to-speech conversion failed:", e);
-        // We can continue without audio, aiResponseAudioUri will remain undefined.
+        ttsError = "Chacha's throat is a little sore, so I couldn't generate voice this time.";
       }
   }
 
@@ -93,7 +95,7 @@ export async function handleUserTurn({
     id: crypto.randomUUID(), // A temporary ID for React key
     ...newSessionTurn,
     timestamp: new Date(), // Use client-side date for optimistic update
-    error: null,
+    error: ttsError,
   };
 }
 

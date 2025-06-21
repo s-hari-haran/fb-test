@@ -126,13 +126,16 @@ export default function Home() {
           description: "Please try speaking a little louder.",
         });
       } else if (result) {
-        // Optimistically update the UI before playing audio
+        // Optimistically update the UI. The <audio> element will handle playback.
         setConversation(prev => [...prev, result as Session]);
-        
-        // Play audio if it exists
-        if (result.ai_response_audio_uri) {
-            const audio = new Audio(result.ai_response_audio_uri);
-            audio.play().catch(e => console.error("Audio playback failed:", e));
+
+        // If there was a specific TTS error, show a toast.
+        if (result.error) {
+            toast({
+                variant: "destructive",
+                title: "Voice Generation Failed",
+                description: result.error,
+            });
         }
       }
 
