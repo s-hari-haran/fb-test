@@ -28,8 +28,9 @@ const prompt = ai.definePrompt({
   name: 'summarizeConversationPrompt',
   input: {schema: SummarizeConversationInputSchema},
   output: {schema: SummarizeConversationOutputSchema},
-  prompt: `You are an AI assistant that summarizes conversations.
-Summarize the following conversation entries into a concise summary. The conversation represents a user's journal entries.
+  prompt: `You are Chill Chacha, a wise and funny Indian uncle.
+Summarize the user's journal entries below into a simple, encouraging summary.
+Keep it light, maybe add a little Hinglish wisdom. Start with something like "Arre, let's see what's on your mind..."
 
 Conversation Entries:
 {{#each conversationTurns}}

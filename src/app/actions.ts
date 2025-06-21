@@ -3,13 +3,19 @@ import { ai } from '@/ai/genkit';
 import { transcribeAudio } from '@/ai/flows/transcribe-audio';
 import { detectEmotion } from '@/ai/flows/detect-emotion';
 import { summarizeConversation } from '@/ai/flows/summarize-conversation';
-import type { ConversationTurn } from '@/lib/types';
+import type { Session } from '@/lib/types';
+import { collection, addDoc, updateDoc, doc, serverTimestamp } from 'firebase/firestore';
+import { firestore } from '@/lib/firebase';
 
-export async function processAudioAction({ audioDataUri, language }: { audioDataUri: string; language: string }) {
+export async function recordAndAnalyzeAudio({ uid, audioDataUri, language }: { uid: string, audioDataUri: string; language: string }) {
+  if (!uid) {
+    throw new Error('User is not authenticated.');
+  }
   if (!audioDataUri) {
     throw new Error('Audio data is missing.');
   }
 
+  // 1. Transcribe and detect emotion
   const { transcript } = await transcribeAudio({ audioDataUri, language });
   if (!transcript) {
     throw new Error('Transcription failed.');
@@ -20,30 +26,50 @@ export async function processAudioAction({ audioDataUri, language }: { audioData
     throw new Error('Emotion detection failed.');
   }
 
-  // We are re-implementing the prompt from generate-supportive-response flow
-  // to add language support, as the original flow does not have a language parameter.
-  const responsePrompt = `You are an AI mental health assistant. Your goal is to provide supportive responses to users based on their detected emotion and audio transcript.
+  // 2. Save initial session to Firestore
+  const sessionRef = await addDoc(collection(firestore, 'sessions'), {
+    uid,
+    timestamp: serverTimestamp(),
+    audio_transcript: transcript,
+    detected_emotion: detectedEmotion,
+    AI_response: '', // Initially empty
+  });
+
+  // 3. Generate Chill Chacha response
+  const chachaPrompt = `You are "Chill Chacha," a wise, funny Indian uncle providing simple life advice in a mix of Hindi and English (Hinglish).
+Your tagline is: "Pocket therapist that feels your vibe and chills with you offline."
+Based on the user's transcript and detected emotion, give some advice.
+- Start with your tagline.
+- Be supportive and light-hearted.
+- Use some Hinglish phrases like "Arre yaar," "tension mat le," or a light joke/idiom.
+- ALWAYS end with a 2-line summary starting with "TL;DR:".
 
 Detected Emotion: ${detectedEmotion}
-Audio Transcript: ${transcript}
+User's thought: "${transcript}"
 
-Generate a supportive response that acknowledges the user's emotion and provides helpful advice or encouragement.
-IMPORTANT: Your entire response must be in the following language: ${language}.`;
+Now, give your wise, chill response in ${language}.`;
+
 
   const { text: supportiveResponse } = await ai.generate({
-    prompt: responsePrompt,
-    model: 'googleai/gemini-2.0-flash', // Specify the model
+    prompt: chachaPrompt,
+    model: 'googleai/gemini-2.0-flash',
   });
 
   if (!supportiveResponse) {
     throw new Error('Response generation failed.');
   }
 
-  return { transcript, detectedEmotion, supportiveResponse };
-};
+  // 4. Update session with AI response
+  await updateDoc(doc(firestore, 'sessions', sessionRef.id), {
+    AI_response: supportiveResponse,
+  });
 
-export async function summarizeConversationAction(conversation: ConversationTurn[]) {
-  const transcripts = conversation.map((turn) => turn.transcript);
+  return { id: sessionRef.id };
+}
+
+
+export async function summarizeConversationAction(conversation: Session[]) {
+  const transcripts = conversation.map((turn) => turn.audio_transcript);
 
   if (transcripts.length === 0) {
     return { summary: "There's nothing to summarize yet. Start a conversation first." };

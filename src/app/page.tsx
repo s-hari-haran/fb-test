@@ -1,45 +1,93 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import type { ConversationTurn } from '@/lib/types';
-import { processAudioAction, summarizeConversationAction } from '@/app/actions';
+import type { Session } from '@/lib/types';
+import { recordAndAnalyzeAudio, summarizeConversationAction } from '@/app/actions';
 import AudioRecorder from '@/components/audio-recorder';
 import ConversationView from '@/components/conversation-view';
 import LanguageSelector from '@/components/language-selector';
-import { useToast } from "@/hooks/use-toast"
+import { useToast } from "@/hooks/use-toast";
 import { Languages } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import SummarySidebar from '@/components/summary-sidebar';
+import { auth, firestore, onAuthStateChanged, signInAnonymously } from '@/lib/firebase';
+import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
+import type { User } from 'firebase/auth';
 
 export default function Home() {
-  const [conversation, setConversation] = useState<ConversationTurn[]>([]);
+  const [conversation, setConversation] = useState<Session[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [language, setLanguage] = useState('en-US');
   const [summary, setSummary] = useState('');
   const [isSummarizing, setIsSummarizing] = useState(false);
-  const { toast } = useToast()
+  const [user, setUser] = useState<User | null>(null);
+  const { toast } = useToast();
   const conversationEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      if (currentUser) {
+        setUser(currentUser);
+      } else {
+        signInAnonymously(auth).catch((error) => {
+          console.error("Anonymous sign-in failed", error);
+          toast({ variant: "destructive", title: "Authentication Failed", description: "Could not sign you in. Some features might not work." });
+        });
+      }
+    });
+    return () => unsubscribe();
+  }, [toast]);
+
+  useEffect(() => {
+    if (user) {
+      const q = query(
+        collection(firestore, 'sessions'),
+        where('uid', '==', user.uid),
+        orderBy('timestamp', 'asc')
+      );
+
+      const unsubscribe = onSnapshot(q, (querySnapshot) => {
+        const sessions: Session[] = [];
+        querySnapshot.forEach((doc) => {
+          const data = doc.data();
+          sessions.push({
+            id: doc.id,
+            uid: data.uid,
+            timestamp: data.timestamp?.toDate(),
+            audio_transcript: data.audio_transcript,
+            detected_emotion: data.detected_emotion,
+            AI_response: data.AI_response,
+          });
+        });
+        setConversation(sessions);
+      });
+
+      return () => unsubscribe();
+    }
+  }, [user]);
 
   useEffect(() => {
     conversationEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [conversation]);
 
   const handleRecordingComplete = async (audioDataUri: string) => {
+    if (!user) {
+      toast({ variant: "destructive", title: "Not Signed In", description: "You must be signed in to record a session." });
+      return;
+    }
     setIsProcessing(true);
     setSummary('');
     try {
-      const result = await processAudioAction({ audioDataUri, language });
-      if (result) {
-        setConversation(prev => [...prev, { id: Date.now(), ...result }]);
-      }
+      await recordAndAnalyzeAudio({ uid: user.uid, audioDataUri, language });
+      // State will be updated by Firestore listener
     } catch (error) {
       console.error(error);
       toast({
         variant: "destructive",
         title: "An error occurred",
         description: "Failed to process audio. Please try again.",
-      })
+      });
     } finally {
       setIsProcessing(false);
     }
@@ -54,6 +102,7 @@ export default function Home() {
     }
     setIsSummarizing(true);
     try {
+      // Pass the updated session type to the action
       const result = await summarizeConversationAction(conversation);
       if (result) {
         setSummary(result.summary);
@@ -69,7 +118,6 @@ export default function Home() {
       setIsSummarizing(false);
     }
   };
-
 
   return (
     <SidebarProvider>

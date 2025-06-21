@@ -1,13 +1,13 @@
 'use client';
 
-import type { ConversationTurn } from '@/lib/types';
+import type { Session } from '@/lib/types';
 import MessageBubble from './message-bubble';
 import { Card, CardContent } from '@/components/ui/card';
 import { Bot, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 type ConversationViewProps = {
-  conversation: ConversationTurn[];
+  conversation: Session[];
   isProcessing: boolean;
 };
 
@@ -56,12 +56,14 @@ export default function ConversationView({ conversation, isProcessing }: Convers
            >
             <div className="space-y-6">
               <MessageBubble
-                message={{ role: 'user', content: turn.transcript }}
-                emotion={turn.detectedEmotion}
+                message={{ role: 'user', content: turn.audio_transcript }}
+                emotion={turn.detected_emotion}
               />
-              <MessageBubble
-                message={{ role: 'ai', content: turn.supportiveResponse }}
-              />
+              {turn.AI_response && (
+                <MessageBubble
+                  message={{ role: 'ai', content: turn.AI_response }}
+                />
+              )}
             </div>
            </motion.div>
         ))}
