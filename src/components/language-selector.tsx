@@ -23,6 +23,7 @@ const languages = [
   { value: 'ja-JP', label: '日本語' },
   { value: 'ko-KR', label: '한국어' },
   { value: 'zh-CN', label: '中文 (简体)' },
+  { value: 'kn-IN', label: 'ಕನ್ನಡ' },
 ];
 
 export default function LanguageSelector({ selectedLanguage, onLanguageChange }: LanguageSelectorProps) {

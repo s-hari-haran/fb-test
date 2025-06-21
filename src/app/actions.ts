@@ -2,6 +2,8 @@
 import { ai } from '@/ai/genkit';
 import { transcribeAudio } from '@/ai/flows/transcribe-audio';
 import { detectEmotion } from '@/ai/flows/detect-emotion';
+import { summarizeConversation } from '@/ai/flows/summarize-conversation';
+import type { ConversationTurn } from '@/lib/types';
 
 export async function processAudioAction({ audioDataUri, language }: { audioDataUri: string; language: string }) {
   if (!audioDataUri) {
@@ -39,3 +41,14 @@ IMPORTANT: Your entire response must be in the following language: ${language}.`
 
   return { transcript, detectedEmotion, supportiveResponse };
 };
+
+export async function summarizeConversationAction(conversation: ConversationTurn[]) {
+  const transcripts = conversation.map((turn) => turn.transcript);
+
+  if (transcripts.length === 0) {
+    return { summary: "There's nothing to summarize yet. Start a conversation first." };
+  }
+
+  const { summary } = await summarizeConversation({ conversationTurns: transcripts });
+  return { summary };
+}
