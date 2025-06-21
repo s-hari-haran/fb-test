@@ -4,7 +4,7 @@ import { Toaster } from "@/components/ui/toaster"
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'InnerSight',
+  title: 'ChillChacha',
   description: 'An AI mental health assistant that works offline.',
   manifest: '/manifest.json',
 };

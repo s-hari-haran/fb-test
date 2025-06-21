@@ -30,7 +30,7 @@ export default function SummarySidebar({
           <div className="flex items-center gap-3">
             <Bot className="w-8 h-8 text-primary" />
             <h1 className="text-2xl font-bold font-headline text-foreground">
-              InnerSight
+              ChillChacha
             </h1>
           </div>
         </SidebarHeader>

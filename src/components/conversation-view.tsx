@@ -15,7 +15,7 @@ const WelcomeMessage = () => (
   <Card className="shadow-md border-primary/20 bg-card/50 mb-8">
     <CardContent className="p-6 text-center">
       <Bot className="w-12 h-12 mx-auto text-primary mb-4" />
-      <h2 className="text-2xl font-bold text-foreground mb-2">Welcome to InnerSight</h2>
+      <h2 className="text-2xl font-bold text-foreground mb-2">Welcome to ChillChacha</h2>
       <p className="text-muted-foreground">
         Your personal space for reflection. Tap the microphone below to start a new entry whenever you're ready.
       </p>
