@@ -1,11 +1,21 @@
-
 {
   "name": "ChillChacha",
   "short_name": "Chacha",
-  "description": "An AI mental health assistant that works offline.",
-  "start_url": "/",
+  "start_url": ".",
   "display": "standalone",
-  "background_color": "#E9EAEF",
-  "theme_color": "#2196F3",
-  "icons": []
+  "background_color": "#f0f4f8",
+  "theme_color": "#3b82f6",
+  "description": "An AI mental health assistant that works offline.",
+  "icons": [
+    {
+      "src": "/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
 }
