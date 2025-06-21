@@ -1,10 +1,11 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { User, Bot, Smile, Frown, Meh, Angry, Dna, Rocket } from "lucide-react";
+import { User, Smile, Frown, Meh, Angry, Dna, Rocket } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import type { ReactNode } from "react";
+import ChachaLogo from './ChachaLogo';
 
 type Message = {
   role: 'user' | 'ai';
@@ -48,15 +49,18 @@ export default function MessageBubble({ message, emotion }: MessageBubbleProps) 
     isUser ? 'bg-primary text-primary-foreground rounded-br-none' : 'bg-card text-card-foreground rounded-bl-none'
   );
 
-  const IconComponent = isUser ? User : Bot;
   const iconClasses = cn(
-    "w-8 h-8 p-1.5 rounded-full flex-shrink-0",
-    isUser ? "bg-primary text-primary-foreground" : "bg-card text-foreground border"
+    "w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center",
+    isUser 
+      ? "bg-primary text-primary-foreground p-1.5" 
+      : "bg-card text-foreground border"
   );
 
   return (
     <div className={bubbleClasses}>
-      <IconComponent className={iconClasses} />
+       <div className={iconClasses}>
+        {isUser ? <User className="w-full h-full" /> : <ChachaLogo className="w-8 h-8" />}
+      </div>
       <Card className={cardClasses}>
         {emotion && (
             <CardHeader className="p-3 pb-1">

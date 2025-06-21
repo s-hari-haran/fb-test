@@ -3,8 +3,9 @@
 import type { Session } from '@/lib/types';
 import MessageBubble from './message-bubble';
 import { Card, CardContent } from '@/components/ui/card';
-import { Bot, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import ChachaLogo from './ChachaLogo';
 
 type ConversationViewProps = {
   conversation: Session[];
@@ -12,15 +13,17 @@ type ConversationViewProps = {
 };
 
 const WelcomeMessage = () => (
-  <Card className="shadow-md border-primary/20 bg-card/50 mb-8">
-    <CardContent className="p-6 text-center">
-      <Bot className="w-12 h-12 mx-auto text-primary mb-4" />
-      <h2 className="text-2xl font-bold text-foreground mb-2">Welcome to ChillChacha</h2>
-      <p className="text-muted-foreground">
-        Your personal space for reflection. Tap the microphone below to start a new entry whenever you're ready.
-      </p>
-    </CardContent>
-  </Card>
+  <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
+    <Card className="shadow-md border-primary/20 bg-card/50 mb-8">
+      <CardContent className="p-6 text-center">
+        <ChachaLogo className="w-16 h-16 mx-auto mb-4 text-primary" />
+        <h2 className="text-2xl font-bold text-foreground mb-2">Welcome to ChillChacha</h2>
+        <p className="text-muted-foreground">
+          Your personal space for reflection. Tap the microphone below to start a new entry whenever you're ready.
+        </p>
+      </CardContent>
+    </Card>
+  </motion.div>
 );
 
 const ProcessingIndicator = () => (

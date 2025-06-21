@@ -10,7 +10,8 @@ import {
   SidebarTrigger,
   SidebarGroup
 } from '@/components/ui/sidebar';
-import { Bot, Loader2, NotebookText } from 'lucide-react';
+import { Loader2, NotebookText } from 'lucide-react';
+import ChachaLogo from './ChachaLogo';
 
 type SummarySidebarProps = {
   summary: string;
@@ -28,7 +29,7 @@ export default function SummarySidebar({
       <Sidebar>
         <SidebarHeader>
           <div className="flex items-center gap-3">
-            <Bot className="w-8 h-8 text-primary" />
+            <ChachaLogo className="w-8 h-8 text-primary" />
             <h1 className="text-2xl font-bold font-headline text-foreground">
               ChillChacha
             </h1>
