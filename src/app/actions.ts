@@ -5,7 +5,7 @@ import { generateSupportiveResponse } from '@/ai/flows/generate-supportive-respo
 import { summarizeConversation } from '@/ai/flows/summarize-conversation';
 import { textToSpeech } from '@/ai/flows/text-to-speech';
 import type { Session } from '@/lib/types';
-import { collection, addDoc, updateDoc, doc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, updateDoc, doc, serverTimestamp, getDoc } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase';
 
 // Helper type for conversation history passed to the AI flow
@@ -14,16 +14,15 @@ type Turn = {
   content: string;
 };
 
-export async function recordAndAnalyzeAudio({
+// Step 1: Process user's audio and create the initial session entry
+export async function processUserAudio({
   uid,
   audioDataUri,
   language,
-  conversationHistory,
 }: {
   uid: string;
   audioDataUri: string;
   language: string;
-  conversationHistory: Turn[];
 }) {
   if (!uid) {
     throw new Error('User is not authenticated.');
@@ -32,18 +31,19 @@ export async function recordAndAnalyzeAudio({
     throw new Error('Audio data is missing.');
   }
 
-  // 1. Transcribe and detect emotion
+  // 1. Transcribe audio
   const { transcript } = await transcribeAudio({ audioDataUri, language });
   if (!transcript) {
-    throw new Error('Transcription failed.');
+    return { id: null, transcript: null, detectedEmotion: null, error: 'silent' };
   }
 
+  // 2. Detect emotion
   const { detectedEmotion } = await detectEmotion({ audioTranscript: transcript });
   if (!detectedEmotion) {
     throw new Error('Emotion detection failed.');
   }
 
-  // 2. Save initial session to Firestore
+  // 3. Save initial session to Firestore
   const sessionRef = await addDoc(collection(firestore, 'sessions'), {
     uid,
     timestamp: serverTimestamp(),
@@ -53,10 +53,32 @@ export async function recordAndAnalyzeAudio({
     ai_response_audio_uri: '', // Initially empty
   });
 
-  // 3. Generate Chill Chacha response text using the flow
+  return { id: sessionRef.id, transcript, detectedEmotion, error: null };
+}
+
+// Step 2: Generate AI response and update the session
+export async function generateAndSaveChachaResponse({
+  sessionId,
+  conversationHistory,
+  language,
+}: {
+  sessionId: string;
+  conversationHistory: Turn[];
+  language: string;
+}) {
+  const sessionDocRef = doc(firestore, 'sessions', sessionId);
+  const sessionDoc = await getDoc(sessionDocRef);
+
+  if (!sessionDoc.exists()) {
+    throw new Error('Session not found.');
+  }
+
+  const { audio_transcript: currentTranscript, detected_emotion: detectedEmotion } = sessionDoc.data();
+
+  // 1. Generate Chill Chacha response text using the flow
   const { supportiveResponse: supportiveResponseText } =
     await generateSupportiveResponse({
-      currentTranscript: transcript,
+      currentTranscript,
       detectedEmotion,
       conversationHistory,
       language,
@@ -66,7 +88,7 @@ export async function recordAndAnalyzeAudio({
     throw new Error('Response generation failed.');
   }
 
-  // 4. Generate audio from the response text
+  // 2. Generate audio from the response text
   const { audioDataUri: responseAudioUri } = await textToSpeech({
     text: supportiveResponseText,
   });
@@ -75,13 +97,13 @@ export async function recordAndAnalyzeAudio({
     throw new Error('Text-to-speech conversion failed.');
   }
 
-  // 5. Update session with AI response text and audio URI
-  await updateDoc(doc(firestore, 'sessions', sessionRef.id), {
+  // 3. Update session with AI response text and audio URI
+  await updateDoc(sessionDocRef, {
     ai_response_text: supportiveResponseText,
     ai_response_audio_uri: responseAudioUri,
   });
 
-  return { id: sessionRef.id };
+  return { success: true };
 }
 
 

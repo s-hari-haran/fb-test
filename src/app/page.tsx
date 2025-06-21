@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import type { Session } from '@/lib/types';
-import { recordAndAnalyzeAudio, summarizeConversationAction } from '@/app/actions';
+import { processUserAudio, generateAndSaveChachaResponse, summarizeConversationAction } from '@/app/actions';
 import AudioRecorder from '@/components/audio-recorder';
 import ConversationView from '@/components/conversation-view';
 import LanguageSelector from '@/components/language-selector';
@@ -69,31 +69,85 @@ export default function Home() {
     conversationEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [conversation]);
 
+  useEffect(() => {
+    if (conversation.length > 0) {
+      const lastTurn = conversation[conversation.length - 1];
+      // If the last turn is not complete (is missing AI response), we are processing.
+      if (lastTurn && !lastTurn.ai_response_text) {
+        setIsProcessing(true);
+      } else {
+        setIsProcessing(false);
+      }
+    } else {
+        setIsProcessing(false);
+    }
+  }, [conversation]);
+
   const handleRecordingComplete = async (audioDataUri: string) => {
-    if (!deviceId) {
-      toast({ variant: "destructive", title: "Error", description: "Could not identify your device. Please try refreshing." });
+    if (!deviceId || isProcessing) {
       return;
     }
     setIsProcessing(true);
     setSummary('');
 
-    // Format conversation history for the AI
-    const conversationHistory = conversation
-      .map(turn => [
-        { role: 'user' as const, content: turn.audio_transcript },
-        { role: 'model' as const, content: turn.ai_response_text },
-      ])
-      .flat()
-      .filter(turn => turn.content);
-
     try {
-      await recordAndAnalyzeAudio({ 
+      // Step 1: Process user's audio. This should be quick.
+      const processResult = await processUserAudio({ 
         uid: deviceId, 
         audioDataUri, 
-        language, 
-        conversationHistory 
+        language,
       });
-      // State will be updated by Firestore listener
+
+      // Handle cases where the audio was silent or processing failed early.
+      if (processResult.error === 'silent') {
+        toast({
+          title: "I didn't hear anything, beta.",
+          description: "Please try speaking a little louder.",
+        });
+        setIsProcessing(false);
+        return;
+      }
+      
+      if (!processResult.id) {
+          throw new Error("Failed to create session.")
+      }
+      
+      // The user's bubble will now appear via the Firestore listener.
+      // `isProcessing` is true, so the "thinking" bubble will show.
+
+      // Step 2: Trigger AI response generation. We don't wait for this.
+      const getAiResponse = async () => {
+        try {
+          const conversationHistory = conversation
+            .map(turn => [
+              { role: 'user' as const, content: turn.audio_transcript },
+              { role: 'model' as const, content: turn.ai_response_text },
+            ])
+            .flat()
+            .filter(turn => turn.content);
+
+          conversationHistory.push({ role: 'user', content: processResult.transcript! });
+
+          await generateAndSaveChachaResponse({
+            sessionId: processResult.id!,
+            conversationHistory,
+            language
+          });
+        } catch (e) {
+            console.error("Error generating AI response:", e);
+             toast({
+                variant: "destructive",
+                title: "Chacha is feeling tired",
+                description: "Couldn't generate a response. Please try again.",
+            });
+            // If the AI response fails, we need to clean up the user's turn
+            // or allow them to try again. For now, just stop processing.
+            setIsProcessing(false);
+        }
+      }
+      
+      getAiResponse();
+
     } catch (error) {
       console.error(error);
       toast({
@@ -101,7 +155,6 @@ export default function Home() {
         title: "An error occurred",
         description: "Failed to process audio. Please try again.",
       });
-    } finally {
       setIsProcessing(false);
     }
   };
