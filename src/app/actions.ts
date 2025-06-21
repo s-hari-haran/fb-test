@@ -58,7 +58,7 @@ export async function handleUserTurn({
   let ttsError: string | null = null;
   if (responseMode === 'voice') {
       try {
-        const textForSpeech = aiResponseText.split('TL;DR:')[0].replace(/\*+/g, '').trim();
+        const textForSpeech = aiResponseText;
         if (textForSpeech) {
           const { audioDataUri } = await textToSpeech({ text: textForSpeech });
           aiResponseAudioUri = audioDataUri;
