@@ -57,7 +57,9 @@ export async function handleUserTurn({
   let aiResponseAudioUri: string | undefined = undefined;
   if (responseMode === 'voice') {
       try {
-        const { audioDataUri } = await textToSpeech({ text: aiResponseText });
+        // Clean the text for TTS: remove the "TL;DR" part and other formatting that might cause issues.
+        const textForSpeech = aiResponseText.split('TL;DR:')[0].replace(/\*+/g, '').trim();
+        const { audioDataUri } = await textToSpeech({ text: textForSpeech });
         aiResponseAudioUri = audioDataUri;
       } catch (e) {
         console.error("Text-to-speech conversion failed:", e);
