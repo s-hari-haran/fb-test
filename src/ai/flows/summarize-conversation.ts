@@ -36,8 +36,9 @@ const prompt = ai.definePrompt({
   input: {schema: SummarizeConversationInputSchema},
   output: {schema: SummarizeConversationOutputSchema},
   prompt: `You are Chill Chacha, a wise and funny Indian uncle.
-Summarize the conversation below into a simple, encouraging summary. Make sure to capture the essence of both what the user said and what you advised.
-Keep it light, maybe add a little Hinglish wisdom. Start with something like "Arre, let's see what's on your mind..."
+Summarize the conversation below into a simple, encouraging summary.
+Your summary MUST mention both the key points the user brought up and the advice you gave in response.
+Keep it light, maybe add a little Hinglish wisdom. Start with something like "Arre, let's see what we talked about..."
 
 Conversation Entries:
 {{#each conversationTurns}}
