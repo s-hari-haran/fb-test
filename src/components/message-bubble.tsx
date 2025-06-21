@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 import { User, Smile, Frown, Meh, Angry, Dna, Rocket } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import React, { type ReactNode, useRef, useEffect } from "react";
+import React, { type ReactNode } from "react";
 import ChachaLogo from './ChachaLogo';
 
 type Message = {
@@ -39,15 +39,6 @@ const EmotionBadge = ({ emotion }: { emotion: string }) => {
 
 export default function MessageBubble({ message, emotion }: MessageBubbleProps) {
   const isUser = message.role === 'user';
-  const audioRef = useRef<HTMLAudioElement>(null);
-
-  useEffect(() => {
-    if (message.audioUri && audioRef.current) {
-      audioRef.current.play().catch(error => {
-        console.warn("Audio autoplay was prevented by the browser:", error);
-      });
-    }
-  }, [message.audioUri]);
   
   const bubbleClasses = cn(
     'flex items-start gap-4 max-w-[85%]',
@@ -84,7 +75,7 @@ export default function MessageBubble({ message, emotion }: MessageBubbleProps) 
                 message.content
             )}
             {message.audioUri && (
-                <audio ref={audioRef} controls src={message.audioUri} className="w-full mt-3 h-10">
+                <audio controls src={message.audioUri} className="w-full mt-3 h-10">
                     Your browser does not support the audio element.
                 </audio>
             )}

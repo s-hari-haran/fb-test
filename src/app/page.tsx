@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
@@ -127,8 +126,14 @@ export default function Home() {
           description: "Please try speaking a little louder.",
         });
       } else if (result) {
-        // Optimistically update the UI
+        // Optimistically update the UI before playing audio
         setConversation(prev => [...prev, result as Session]);
+        
+        // Play audio if it exists
+        if (result.ai_response_audio_uri) {
+            const audio = new Audio(result.ai_response_audio_uri);
+            audio.play().catch(e => console.error("Audio playback failed:", e));
+        }
       }
 
     } catch (error) {
