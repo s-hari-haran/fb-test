@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
@@ -5,15 +6,38 @@ import type { Session } from '@/lib/types';
 import { handleUserTurn, summarizeConversationAction } from '@/app/actions';
 import AudioRecorder from '@/components/audio-recorder';
 import ConversationView from '@/components/conversation-view';
-import LanguageSelector from '@/components/language-selector';
 import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { useToast } from "@/hooks/use-toast";
-import { Languages, Volume2, MessageSquareText } from 'lucide-react';
+import { Settings } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import SummarySidebar from '@/components/summary-sidebar';
 import { firestore } from '@/lib/firebase';
 import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
+
+const languages = [
+  { value: 'en-US', label: 'English (US)' },
+  { value: 'es-ES', label: 'Español' },
+  { value: 'fr-FR', label: 'Français' },
+  { value: 'de-DE', label: 'Deutsch' },
+  { value: 'it-IT', label: 'Italiano' },
+  { value: 'pt-BR', label: 'Português (BR)' },
+  { value: 'ja-JP', label: '日本語' },
+  { value: 'ko-KR', label: '한국어' },
+  { value: 'zh-CN', label: '中文 (简体)' },
+  { value: 'kn-IN', label: 'ಕನ್ನಡ' },
+  { value: 'ta-IN', label: 'தமிழ்' },
+  { value: 'hi-IN', label: 'हिन्दी' },
+];
 
 export default function Home() {
   const [conversation, setConversation] = useState<Session[]>([]);
@@ -91,13 +115,11 @@ export default function Home() {
     setLanguage(newLanguage);
     localStorage.setItem('chillchacha-language', newLanguage);
   };
-
-  const toggleResponseMode = () => {
-    const newMode = responseMode === 'voice' ? 'text' : 'voice';
+  
+  const handleResponseModeChange = (newMode: 'voice' | 'text') => {
     setResponseMode(newMode);
     localStorage.setItem('chillchacha-response-mode', newMode);
   };
-
 
   const handleRecordingComplete = async (audioDataUri: string) => {
     if (!deviceId) return;
@@ -105,7 +127,6 @@ export default function Home() {
     setSummary('');
 
     // Optimistically add the user's turn to the UI
-    const tempUserTurnId = crypto.randomUUID();
     const tempProcessingTurnId = crypto.randomUUID();
 
     // Show a temporary "processing" bubble
@@ -139,9 +160,9 @@ export default function Home() {
       });
       
       // Replace the processing bubble with the actual result
-      setConversation(prev => 
-        prev.map(turn => turn.id === tempProcessingTurnId ? { ...result, id: tempUserTurnId } as Session : turn)
-      );
+       setConversation(prev => 
+         prev.map(turn => turn.id === tempProcessingTurnId ? { ...result, id: result.id || tempProcessingTurnId } as Session : turn)
+       );
 
       if (result.error === 'silent') {
         toast({
@@ -149,7 +170,7 @@ export default function Home() {
           description: "Please try speaking a little louder.",
         });
         // Remove the processing bubble if silent
-        setConversation(prev => prev.filter(turn => turn.id !== tempUserTurnId));
+        setConversation(prev => prev.filter(turn => turn.id !== tempProcessingTurnId));
       } else if (result.error) {
           toast({
               variant: "destructive",
@@ -167,7 +188,7 @@ export default function Home() {
         description: errorMessage,
       });
       // Remove the processing bubble on error
-       setConversation(prev => prev.filter(turn => turn.id === tempProcessingTurnId || turn.id === tempUserTurnId));
+       setConversation(prev => prev.filter(turn => turn.id !== tempProcessingTurnId));
     } finally {
       setIsProcessing(false);
     }
@@ -209,20 +230,28 @@ export default function Home() {
         <div className="flex flex-col h-screen bg-background font-body">
           <header className="bg-card/80 backdrop-blur-sm border-b border-border p-4 shadow-sm sticky top-0 z-10">
             <div className="max-w-4xl mx-auto flex items-center justify-end gap-4">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={toggleResponseMode}
-                aria-label={`Switch to ${responseMode === 'voice' ? 'text' : 'voice'} mode`}
-                className="w-28"
-              >
-                {responseMode === 'voice' ? <Volume2 className="mr-2" /> : <MessageSquareText className="mr-2" />}
-                {responseMode === 'voice' ? 'Voice' : 'Text'} Mode
-              </Button>
-              <div className="flex items-center gap-2">
-                <Languages className="w-5 h-5 text-muted-foreground" />
-                <LanguageSelector selectedLanguage={language} onLanguageChange={handleLanguageChange} />
-              </div>
+               <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="icon">
+                    <Settings className="h-5 w-5" />
+                    <span className="sr-only">Settings</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuLabel>Response Mode</DropdownMenuLabel>
+                  <DropdownMenuRadioGroup value={responseMode} onValueChange={(value) => handleResponseModeChange(value as 'voice' | 'text')}>
+                    <DropdownMenuRadioItem value="voice">Voice</DropdownMenuRadioItem>
+                    <DropdownMenuRadioItem value="text">Text</DropdownMenuRadioItem>
+                  </DropdownMenuRadioGroup>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuLabel>Language</DropdownMenuLabel>
+                  <DropdownMenuRadioGroup value={language} onValueChange={handleLanguageChange}>
+                     {languages.map(lang => (
+                        <DropdownMenuRadioItem key={lang.value} value={lang.value}>{lang.label}</DropdownMenuRadioItem>
+                    ))}
+                  </DropdownMenuRadioGroup>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </header>
 
