@@ -1,14 +1,30 @@
 'use server';
-import { ai } from '@/ai/genkit';
 import { transcribeAudio } from '@/ai/flows/transcribe-audio';
 import { detectEmotion } from '@/ai/flows/detect-emotion';
+import { generateSupportiveResponse } from '@/ai/flows/generate-supportive-response';
 import { summarizeConversation } from '@/ai/flows/summarize-conversation';
 import { textToSpeech } from '@/ai/flows/text-to-speech';
 import type { Session } from '@/lib/types';
 import { collection, addDoc, updateDoc, doc, serverTimestamp } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase';
 
-export async function recordAndAnalyzeAudio({ uid, audioDataUri, language }: { uid: string, audioDataUri: string; language: string }) {
+// Helper type for conversation history passed to the AI flow
+type Turn = {
+  role: 'user' | 'model';
+  content: string;
+};
+
+export async function recordAndAnalyzeAudio({
+  uid,
+  audioDataUri,
+  language,
+  conversationHistory,
+}: {
+  uid: string;
+  audioDataUri: string;
+  language: string;
+  conversationHistory: Turn[];
+}) {
   if (!uid) {
     throw new Error('User is not authenticated.');
   }
@@ -37,31 +53,23 @@ export async function recordAndAnalyzeAudio({ uid, audioDataUri, language }: { u
     ai_response_audio_uri: '', // Initially empty
   });
 
-  // 3. Generate Chill Chacha response text
-  const chachaPrompt = `You are "Chill Chacha," a wise, funny Indian uncle providing simple life advice in a mix of Hindi and English (Hinglish).
-Your tagline is: "Pocket therapist that feels your vibe and chills with you offline."
-Based on the user's transcript and detected emotion, give some advice.
-- Start with your tagline.
-- Be supportive and light-hearted.
-- Use some Hinglish phrases like "Arre yaar," "tension mat le," or a light joke/idiom.
-- ALWAYS end with a 2-line summary starting with "TL;DR:".
-
-Detected Emotion: ${detectedEmotion}
-User's thought: "${transcript}"
-
-Now, give your wise, chill response in ${language}.`;
-
-  const { text: supportiveResponseText } = await ai.generate({
-    prompt: chachaPrompt,
-    model: 'googleai/gemini-2.0-flash',
-  });
+  // 3. Generate Chill Chacha response text using the flow
+  const { supportiveResponse: supportiveResponseText } =
+    await generateSupportiveResponse({
+      currentTranscript: transcript,
+      detectedEmotion,
+      conversationHistory,
+      language,
+    });
 
   if (!supportiveResponseText) {
     throw new Error('Response generation failed.');
   }
 
   // 4. Generate audio from the response text
-  const { audioDataUri: responseAudioUri } = await textToSpeech({ text: supportiveResponseText });
+  const { audioDataUri: responseAudioUri } = await textToSpeech({
+    text: supportiveResponseText,
+  });
 
   if (!responseAudioUri) {
     throw new Error('Text-to-speech conversion failed.');

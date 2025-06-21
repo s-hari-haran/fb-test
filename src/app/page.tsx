@@ -76,8 +76,23 @@ export default function Home() {
     }
     setIsProcessing(true);
     setSummary('');
+
+    // Format conversation history for the AI
+    const conversationHistory = conversation
+      .map(turn => [
+        { role: 'user' as const, content: turn.audio_transcript },
+        { role: 'model' as const, content: turn.ai_response_text },
+      ])
+      .flat()
+      .filter(turn => turn.content);
+
     try {
-      await recordAndAnalyzeAudio({ uid: deviceId, audioDataUri, language });
+      await recordAndAnalyzeAudio({ 
+        uid: deviceId, 
+        audioDataUri, 
+        language, 
+        conversationHistory 
+      });
       // State will be updated by Firestore listener
     } catch (error) {
       console.error(error);
