@@ -2,9 +2,9 @@
 'use server';
 
 /**
- * @fileOverview Generates supportive, conversational responses based on detected emotions and conversation history.
+ * @fileOverview Detects emotion and generates a supportive, conversational response based on conversation history.
  *
- * - generateSupportiveResponse - A function that generates a supportive response based on the detected emotion and conversation history.
+ * - generateSupportiveResponse - A function that detects emotion and generates a supportive response.
  * - GenerateSupportiveResponseInput - The input type for the generateSupportiveResponse function.
  * - GenerateSupportiveResponseOutput - The return type for the generateSupportiveResponse function.
  */
@@ -14,13 +14,13 @@ import {z} from 'genkit';
 
 const GenerateSupportiveResponseInputSchema = z.object({
   currentTranscript: z.string().describe("The user's latest audio recording transcript."),
-  detectedEmotion: z.string().describe('The emotion detected from the user\'s latest audio recording.'),
   conversationHistory: z.string().describe('The formatted history of the conversation so far.'),
   language: z.string().describe('The language for the response.'),
 });
 export type GenerateSupportiveResponseInput = z.infer<typeof GenerateSupportiveResponseInputSchema>;
 
 const GenerateSupportiveResponseOutputSchema = z.object({
+  detectedEmotion: z.string().describe("The predominant emotion detected from the user's latest transcript."),
   supportiveResponse: z.string().describe('A supportive, conversational response based on the detected emotion and history.'),
 });
 export type GenerateSupportiveResponseOutput = z.infer<typeof GenerateSupportiveResponseOutputSchema>;
@@ -36,7 +36,8 @@ const prompt = ai.definePrompt({
   prompt: `You are “Chill Chacha,” a friendly, middle-aged Indian uncle who speaks primarily in English but sprinkles in local Hindi/Tamil/Kannada idioms from the user's language ({{{language}}}) for flavor.
 
 **Task:**
-Generate a supportive response. Your response MUST be well-formatted with newlines between each part as shown in the example.
+1. First, analyze the user's latest entry and determine the predominant emotion. Set the 'detectedEmotion' field in your output.
+2. Then, generate a supportive response based on that emotion. Your response MUST be well-formatted with newlines between each part as shown in the example.
 
 - If the conversation history is empty, start with a warm welcome one-liner.
 - Acknowledge the user's detected emotion.
@@ -56,9 +57,9 @@ Chill Chacha is always here for you.
 ---
 **Current Conversation Context:**
 Conversation History: {{{conversationHistory}}}
-Latest User Entry (Emotion: {{{detectedEmotion}}}): {{{currentTranscript}}}
+Latest User Entry: {{{currentTranscript}}}
 
-Now, generate your response.`,
+Now, analyze the emotion and generate your response.`,
 });
 
 const generateSupportiveResponseFlow = ai.defineFlow(
