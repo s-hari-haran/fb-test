@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
@@ -43,6 +44,8 @@ export default function Home() {
     const savedMode = localStorage.getItem('chillchacha-response-mode') as 'voice' | 'text' | null;
     if (savedMode) {
       setResponseMode(savedMode);
+    } else {
+      setResponseMode('voice'); // Explicitly set default
     }
   }, []);
 
