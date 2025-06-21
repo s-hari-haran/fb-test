@@ -1,0 +1,17 @@
+
+{
+  "name": "InnerSight",
+  "short_name": "InnerSight",
+  "description": "An AI mental health assistant that works offline.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#EBEFF4",
+  "theme_color": "#2196F3",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}
