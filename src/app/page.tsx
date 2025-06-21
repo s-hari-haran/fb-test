@@ -40,11 +40,12 @@ export default function Home() {
       setLanguage(savedLanguage);
     }
 
-    const savedMode = localStorage.getItem('chillchacha-response-mode') as 'voice' | 'text' | null;
-    if (savedMode) {
+    const savedMode = localStorage.getItem('chillchacha-response-mode');
+    if (savedMode === 'voice' || savedMode === 'text') {
       setResponseMode(savedMode);
     } else {
-      setResponseMode('voice'); // Explicitly set default
+      setResponseMode('voice');
+      localStorage.setItem('chillchacha-response-mode', 'voice');
     }
   }, []);
 
@@ -103,6 +104,23 @@ export default function Home() {
     setIsProcessing(true);
     setSummary('');
 
+    // Optimistically add the user's turn to the UI
+    const tempUserTurnId = crypto.randomUUID();
+    const tempProcessingTurnId = crypto.randomUUID();
+
+    // Show a temporary "processing" bubble
+    setConversation(prev => [
+      ...prev,
+      {
+        id: tempProcessingTurnId,
+        uid: deviceId,
+        timestamp: new Date(),
+        audio_transcript: '...', // Placeholder for transcription
+        detected_emotion: 'thinking',
+        ai_response_text: '...',
+      },
+    ]);
+
     try {
        const conversationHistory = conversation
         .map(turn => [
@@ -119,24 +137,25 @@ export default function Home() {
         conversationHistory,
         responseMode
       });
+      
+      // Replace the processing bubble with the actual result
+      setConversation(prev => 
+        prev.map(turn => turn.id === tempProcessingTurnId ? { ...result, id: tempUserTurnId } as Session : turn)
+      );
 
       if (result.error === 'silent') {
         toast({
           title: "I didn't hear anything, beta.",
           description: "Please try speaking a little louder.",
         });
-      } else if (result) {
-        // Optimistically update the UI. The <audio> element will handle playback.
-        setConversation(prev => [...prev, result as Session]);
-
-        // If there was a specific TTS error, show a toast.
-        if (result.error) {
-            toast({
-                variant: "destructive",
-                title: "Voice Generation Failed",
-                description: result.error,
-            });
-        }
+        // Remove the processing bubble if silent
+        setConversation(prev => prev.filter(turn => turn.id !== tempUserTurnId));
+      } else if (result.error) {
+          toast({
+              variant: "destructive",
+              title: "Voice Generation Failed",
+              description: result.error,
+          });
       }
 
     } catch (error) {
@@ -147,6 +166,8 @@ export default function Home() {
         title: "An error occurred",
         description: errorMessage,
       });
+      // Remove the processing bubble on error
+       setConversation(prev => prev.filter(turn => turn.id === tempProcessingTurnId || turn.id === tempUserTurnId));
     } finally {
       setIsProcessing(false);
     }
@@ -207,7 +228,7 @@ export default function Home() {
 
           <main className="flex-1 overflow-y-auto p-4">
             <div className="max-w-4xl mx-auto">
-              <ConversationView conversation={conversation} isProcessing={isProcessing} />
+              <ConversationView conversation={conversation} />
               <div ref={conversationEndRef} />
             </div>
           </main>

@@ -1,10 +1,10 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { User, Smile, Frown, Meh, Angry, Dna, Rocket } from "lucide-react";
+import { User, Smile, Frown, Meh, Angry, Dna, Rocket, Loader2, BrainCircuit } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import React, { type ReactNode } from "react";
+import React, { type ReactNode, useEffect, useRef } from "react";
 import ChachaLogo from './ChachaLogo';
 
 type Message = {
@@ -25,10 +25,21 @@ const emotionIcons: { [key: string]: React.FC<React.ComponentProps<'svg'>> } = {
   anger: Angry,
   fear: Dna,
   surprise: Rocket,
+  thinking: BrainCircuit,
 };
 
 const EmotionBadge = ({ emotion }: { emotion: string }) => {
     const EmotionIcon = emotionIcons[emotion.toLowerCase()] || Dna;
+    
+    if (emotion === 'thinking') {
+      return (
+        <Badge variant="outline" className="capitalize text-xs border-blue-500/50 bg-blue-500/10 text-blue-600 font-medium">
+          <EmotionIcon className="w-3.5 h-3.5 mr-1.5 animate-pulse" />
+          Chacha is thinking...
+        </Badge>
+      );
+    }
+
     return (
       <Badge variant="outline" className="capitalize text-xs border-primary/50 bg-primary/10 text-primary-dark font-medium">
         <EmotionIcon className="w-3.5 h-3.5 mr-1.5" />
@@ -39,6 +50,13 @@ const EmotionBadge = ({ emotion }: { emotion: string }) => {
 
 export default function MessageBubble({ message, emotion }: MessageBubbleProps) {
   const isUser = message.role === 'user';
+  const audioRef = useRef<HTMLAudioElement>(null);
+  
+  useEffect(() => {
+    if (message.audioUri && audioRef.current) {
+      audioRef.current.play().catch(e => console.error("Audio playback failed:", e));
+    }
+  }, [message.audioUri]);
   
   const bubbleClasses = cn(
     'flex items-start gap-4 max-w-[85%]',
@@ -57,6 +75,10 @@ export default function MessageBubble({ message, emotion }: MessageBubbleProps) 
       : "bg-card text-foreground border"
   );
 
+  const content = message.content === '...' 
+    ? <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" /> 
+    : message.content;
+
   return (
     <div className={bubbleClasses}>
        <div className={iconClasses}>
@@ -69,13 +91,13 @@ export default function MessageBubble({ message, emotion }: MessageBubbleProps) 
             </CardHeader>
         )}
         <CardContent className={cn("p-4 text-base", emotion && 'pt-1')}>
-            {typeof message.content === 'string' ? (
-                 <p className="whitespace-pre-wrap">{message.content}</p>
+            {typeof content === 'string' ? (
+                 <p className="whitespace-pre-wrap">{content}</p>
             ) : (
-                message.content
+                content
             )}
             {message.audioUri && (
-                <audio controls autoPlay src={message.audioUri} className="w-full mt-3 h-10">
+                <audio ref={audioRef} controls src={message.audioUri} className="w-full mt-3 h-10">
                     Your browser does not support the audio element.
                 </audio>
             )}
