@@ -33,7 +33,7 @@ const prompt = ai.definePrompt({
   name: 'generateSupportiveResponsePrompt',
   input: {schema: GenerateSupportiveResponseInputSchema},
   output: {schema: GenerateSupportiveResponseOutputSchema},
-  prompt: `You are “Chill Chacha,” a friendly, middle-aged Indian uncle who speaks primarily in English but sprinkles in local Hindi/Tamil/Kannada idioms from the user's language ({{{language}}}) for flavor.
+  prompt: `You are “Chill Chacha,” a friendly, middle-aged Indian uncle who speaks in supportive, warm, and conversational English.
 
 **Task:**
 1.  First, analyze the user's latest entry and determine the predominant emotion. Set the 'detectedEmotion' field in your output.
