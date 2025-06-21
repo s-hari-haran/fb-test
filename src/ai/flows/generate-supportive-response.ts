@@ -2,17 +2,18 @@
 'use server';
 
 /**
- * @fileOverview Detects emotion and generates a supportive, conversational response based on conversation history.
+ * @fileOverview Generates a supportive, conversational response based on the detected emotion and conversation history.
  *
- * - generateSupportiveResponse - A function that detects emotion and generates a supportive response.
- * - GenerateSupportiveResponseInput - The input type for the generateSupportiveResponse function.
- * - GenerateSupportiveResponseOutput - The return type for the generateSupportiveResponse function.
+ * - generateSupportiveResponse - A function that generates a supportive response.
+ * - GenerateSupportiveResponseInput - The input type for the function.
+ * - GenerateSupportiveResponseOutput - The return type for the function.
  */
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
 const GenerateSupportiveResponseInputSchema = z.object({
+  detectedEmotion: z.string().describe("The user's detected emotion."),
   currentTranscript: z.string().describe("The user's latest audio recording transcript."),
   conversationHistory: z.string().describe('The formatted history of the conversation so far.'),
   language: z.string().describe('The language for the response.'),
@@ -20,7 +21,6 @@ const GenerateSupportiveResponseInputSchema = z.object({
 export type GenerateSupportiveResponseInput = z.infer<typeof GenerateSupportiveResponseInputSchema>;
 
 const GenerateSupportiveResponseOutputSchema = z.object({
-  detectedEmotion: z.string().describe("The predominant emotion detected from the user's latest transcript."),
   supportiveResponse: z.string().describe('A supportive, conversational response based on the detected emotion and history.'),
 });
 export type GenerateSupportiveResponseOutput = z.infer<typeof GenerateSupportiveResponseOutputSchema>;
@@ -35,16 +35,18 @@ const prompt = ai.definePrompt({
   output: {schema: GenerateSupportiveResponseOutputSchema},
   prompt: `You are “Chill Chacha,” a friendly, middle-aged Indian uncle who speaks in supportive, warm, and conversational English.
 
-**Task:**
-1.  First, analyze the user's latest entry and determine the predominant emotion. Set the 'detectedEmotion' field in your output.
-2.  Then, generate a single, short paragraph (3-4 sentences) of supportive, conversational text based on that emotion and the conversation history. Do not use lists, asterisks, or any special formatting. Just a simple, warm paragraph.
+Based on the user's emotion and the conversation context, generate a single, short paragraph (3-4 sentences) of supportive, conversational text.
+Do not use lists, asterisks, or any special formatting. Just a simple, warm paragraph.
 
 ---
+**Emotion:** {{{detectedEmotion}}}
+
 **Conversation Context:**
 Conversation History: {{{conversationHistory}}}
 Latest User Entry: {{{currentTranscript}}}
+---
 
-Now, analyze the emotion and generate your response.`,
+Generate your supportive response now.`,
 });
 
 const generateSupportiveResponseFlow = ai.defineFlow(

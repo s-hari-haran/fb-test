@@ -6,6 +6,7 @@ import { textToSpeech } from '@/ai/flows/text-to-speech';
 import type { Session } from '@/lib/types';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase';
+import { detectEmotion } from '@/ai/flows/detect-emotion';
 
 // Helper type for conversation history passed to the AI flow
 type Turn = {
@@ -39,21 +40,28 @@ export async function handleUserTurn({
     return { error: 'silent' };
   }
 
-  // 2. Generate response and detect emotion in one step for better performance
+  // 2. Detect emotion from the transcript
+  const { detectedEmotion } = await detectEmotion({ audioTranscript: transcript });
+  if (!detectedEmotion) {
+    throw new Error('Emotion detection failed.');
+  }
+  
+  // 3. Generate a supportive response based on the emotion and history
   const historyString = conversationHistory.length > 0 
     ? "Conversation History:\n" + conversationHistory.map(turn => `${turn.role}: ${turn.content}`).join('\n')
     : "";
   
-  const { supportiveResponse: aiResponseText, detectedEmotion } = await generateSupportiveResponse({
+  const { supportiveResponse: aiResponseText } = await generateSupportiveResponse({
     currentTranscript: transcript,
     conversationHistory: historyString,
     language,
+    detectedEmotion,
   });
-   if (!aiResponseText || !detectedEmotion) {
-    throw new Error('Response generation or emotion detection failed.');
+   if (!aiResponseText) {
+    throw new Error('Response generation failed.');
   }
 
-  // 3. Conditionally generate audio for the response
+  // 4. Conditionally generate audio for the response
   let aiResponseAudioUri: string | undefined = undefined;
   let ttsError: string | null = null;
   if (responseMode === 'voice') {
@@ -69,7 +77,7 @@ export async function handleUserTurn({
       }
   }
 
-  // 4. Create session object for UI update
+  // 5. Create session object for UI update
   const newSessionTurn: Omit<Session, 'id' | 'timestamp'> = {
     uid,
     audio_transcript: transcript,
@@ -78,7 +86,7 @@ export async function handleUserTurn({
     ai_response_audio_uri: aiResponseAudioUri,
   };
   
-  // 5. Prepare data for Firestore, removing any undefined fields to prevent errors.
+  // 6. Prepare data for Firestore, removing any undefined fields to prevent errors.
   const dataToSave: any = {
       ...newSessionTurn,
       timestamp: serverTimestamp(),
@@ -90,7 +98,7 @@ export async function handleUserTurn({
   // Save to Firestore in the background
   addDoc(collection(firestore, 'sessions'), dataToSave).catch(console.error);
   
-  // 6. Return the full turn data to the client for immediate UI update
+  // 7. Return the full turn data to the client for immediate UI update
   return {
     id: crypto.randomUUID(), // A temporary ID for React key
     ...newSessionTurn,
