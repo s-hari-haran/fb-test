@@ -46,13 +46,16 @@ export async function handleUserTurn({
     throw new Error('Emotion detection failed.');
   }
   
-  const fullConversationHistory = [...conversationHistory, { role: 'user', content: transcript }];
+  const historyString = conversationHistory.length > 0 
+    ? "Conversation History:\n" + conversationHistory.map(turn => `${turn.role}: ${turn.content}`).join('\n')
+    : "";
+
 
   // 3. Generate Chill Chacha response text
   const { supportiveResponse: aiResponseText } = await generateSupportiveResponse({
     currentTranscript: transcript,
     detectedEmotion,
-    conversationHistory: fullConversationHistory,
+    conversationHistory: historyString,
     language,
   });
    if (!aiResponseText) {

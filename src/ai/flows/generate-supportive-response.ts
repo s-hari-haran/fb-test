@@ -12,15 +12,10 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
-const TurnSchema = z.object({
-  role: z.enum(['user', 'model']),
-  content: z.string(),
-});
-
 const GenerateSupportiveResponseInputSchema = z.object({
   currentTranscript: z.string().describe("The user's latest audio recording transcript."),
   detectedEmotion: z.string().describe('The emotion detected from the user\'s latest audio recording.'),
-  conversationHistory: z.array(TurnSchema).describe('The history of the conversation so far.'),
+  conversationHistory: z.string().describe('The formatted history of the conversation so far.'),
   language: z.string().describe('The language for the response.'),
 });
 export type GenerateSupportiveResponseInput = z.infer<typeof GenerateSupportiveResponseInputSchema>;
@@ -56,10 +51,7 @@ Follow these steps to structure your response:
 
 Return only the text response in {{{language}}}.
 
-Conversation History:
-{{#each conversationHistory}}
-{{role}}: {{{content}}}
-{{/each}}
+{{{conversationHistory}}}
 
 Latest user entry:
 Detected Emotion: {{{detectedEmotion}}}
