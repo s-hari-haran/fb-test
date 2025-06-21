@@ -1,10 +1,10 @@
-'use client';
+"use client";
 
-import { cn } from '@/lib/utils';
-import { User, Bot, Smile, Frown, Meh, Angry, Dna, Rocket } from 'lucide-react';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import type { ReactNode } from 'react';
+import { cn } from "@/lib/utils";
+import { User, Bot, Smile, Frown, Meh, Angry, Dna, Rocket } from "lucide-react";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import type { ReactNode } from "react";
 
 type Message = {
   role: 'user' | 'ai';
@@ -70,7 +70,7 @@ export default function MessageBubble({ message, emotion }: MessageBubbleProps) 
                 message.content
             )}
             {message.audioUri && (
-                <audio controls src={message.audioUri} className="w-full mt-3 h-10">
+                <audio controls autoPlay src={message.audioUri} className="w-full mt-3 h-10">
                     Your browser does not support the audio element.
                 </audio>
             )}
