@@ -2,12 +2,13 @@
 
 import { useState, useRef, useEffect } from 'react';
 import type { Session } from '@/lib/types';
-import { processUserAudio, generateAndSaveChachaResponse, summarizeConversationAction } from '@/app/actions';
+import { handleUserTurn, summarizeConversationAction } from '@/app/actions';
 import AudioRecorder from '@/components/audio-recorder';
 import ConversationView from '@/components/conversation-view';
 import LanguageSelector from '@/components/language-selector';
+import { Button } from '@/components/ui/button';
 import { useToast } from "@/hooks/use-toast";
-import { Languages } from 'lucide-react';
+import { Languages, Volume2, MessageSquareText } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import SummarySidebar from '@/components/summary-sidebar';
@@ -18,6 +19,7 @@ export default function Home() {
   const [conversation, setConversation] = useState<Session[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [language, setLanguage] = useState('en-US');
+  const [responseMode, setResponseMode] = useState<'voice' | 'text'>('voice');
   const [summary, setSummary] = useState('');
   const [isSummarizing, setIsSummarizing] = useState(false);
   const [deviceId, setDeviceId] = useState<string | null>(null);
@@ -58,7 +60,7 @@ export default function Home() {
         setConversation(sessions);
       }, (error) => {
         console.error("Firestore snapshot error:", error);
-        toast({ variant: "destructive", title: "Connection Error", description: "Could not fetch previous sessions." });
+        toast({ variant: "destructive", title: "Connection Error", description: "Could not fetch session history." });
       });
 
       return () => unsubscribe();
@@ -69,92 +71,47 @@ export default function Home() {
     conversationEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [conversation]);
 
-  useEffect(() => {
-    if (conversation.length > 0) {
-      const lastTurn = conversation[conversation.length - 1];
-      // If the last turn is not complete (is missing AI response), we are processing.
-      if (lastTurn && !lastTurn.ai_response_text) {
-        setIsProcessing(true);
-      } else {
-        setIsProcessing(false);
-      }
-    } else {
-        setIsProcessing(false);
-    }
-  }, [conversation]);
-
   const handleRecordingComplete = async (audioDataUri: string) => {
-    if (!deviceId || isProcessing) {
-      return;
-    }
+    if (!deviceId) return;
     setIsProcessing(true);
     setSummary('');
 
     try {
-      // Step 1: Process user's audio. This should be quick.
-      const processResult = await processUserAudio({ 
-        uid: deviceId, 
-        audioDataUri, 
+       const conversationHistory = conversation
+        .map(turn => [
+          { role: 'user' as const, content: turn.audio_transcript },
+          { role: 'model' as const, content: turn.ai_response_text },
+        ])
+        .flat()
+        .filter(turn => turn.content);
+
+      const result = await handleUserTurn({
+        uid: deviceId,
+        audioDataUri,
         language,
+        conversationHistory,
+        responseMode
       });
 
-      // Handle cases where the audio was silent or processing failed early.
-      if (processResult.error === 'silent') {
+      if (result.error === 'silent') {
         toast({
           title: "I didn't hear anything, beta.",
           description: "Please try speaking a little louder.",
         });
-        setIsProcessing(false);
-        return;
+      } else if (result) {
+        // Optimistically update the UI
+        setConversation(prev => [...prev, result as Session]);
       }
-      
-      if (!processResult.id) {
-          throw new Error("Failed to create session.")
-      }
-      
-      // The user's bubble will now appear via the Firestore listener.
-      // `isProcessing` is true, so the "thinking" bubble will show.
-
-      // Step 2: Trigger AI response generation. We don't wait for this.
-      const getAiResponse = async () => {
-        try {
-          const conversationHistory = conversation
-            .map(turn => [
-              { role: 'user' as const, content: turn.audio_transcript },
-              { role: 'model' as const, content: turn.ai_response_text },
-            ])
-            .flat()
-            .filter(turn => turn.content);
-
-          conversationHistory.push({ role: 'user', content: processResult.transcript! });
-
-          await generateAndSaveChachaResponse({
-            sessionId: processResult.id!,
-            conversationHistory,
-            language
-          });
-        } catch (e) {
-            console.error("Error generating AI response:", e);
-             toast({
-                variant: "destructive",
-                title: "Chacha is feeling tired",
-                description: "Couldn't generate a response. Please try again.",
-            });
-            // If the AI response fails, we need to clean up the user's turn
-            // or allow them to try again. For now, just stop processing.
-            setIsProcessing(false);
-        }
-      }
-      
-      getAiResponse();
 
     } catch (error) {
       console.error(error);
+      const errorMessage = error instanceof Error ? error.message : "Please try again.";
       toast({
         variant: "destructive",
         title: "An error occurred",
-        description: "Failed to process audio. Please try again.",
+        description: errorMessage,
       });
+    } finally {
       setIsProcessing(false);
     }
   };
@@ -194,7 +151,17 @@ export default function Home() {
       <SidebarInset>
         <div className="flex flex-col h-screen bg-background font-body">
           <header className="bg-card/80 backdrop-blur-sm border-b border-border p-4 shadow-sm sticky top-0 z-10">
-            <div className="max-w-4xl mx-auto flex items-center justify-end">
+            <div className="max-w-4xl mx-auto flex items-center justify-end gap-4">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setResponseMode(mode => (mode === 'voice' ? 'text' : 'voice'))}
+                aria-label={`Switch to ${responseMode === 'voice' ? 'text' : 'voice'} mode`}
+                className="w-28"
+              >
+                {responseMode === 'voice' ? <Volume2 className="mr-2" /> : <MessageSquareText className="mr-2" />}
+                {responseMode === 'voice' ? 'Voice' : 'Text'} Mode
+              </Button>
               <div className="flex items-center gap-2">
                 <Languages className="w-5 h-5 text-muted-foreground" />
                 <LanguageSelector selectedLanguage={language} onLanguageChange={setLanguage} />

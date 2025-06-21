@@ -5,7 +5,7 @@ import { generateSupportiveResponse } from '@/ai/flows/generate-supportive-respo
 import { summarizeConversation } from '@/ai/flows/summarize-conversation';
 import { textToSpeech } from '@/ai/flows/text-to-speech';
 import type { Session } from '@/lib/types';
-import { collection, addDoc, updateDoc, doc, serverTimestamp, getDoc } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase';
 
 // Helper type for conversation history passed to the AI flow
@@ -14,18 +14,21 @@ type Turn = {
   content: string;
 };
 
-// Step 1: Process user's audio and create the initial session entry
-export async function processUserAudio({
+export async function handleUserTurn({
   uid,
   audioDataUri,
   language,
+  conversationHistory,
+  responseMode,
 }: {
   uid: string;
   audioDataUri: string;
   language: string;
+  conversationHistory: Turn[];
+  responseMode: 'voice' | 'text';
 }) {
   if (!uid) {
-    throw new Error('User is not authenticated.');
+    throw new Error('User/device ID is missing.');
   }
   if (!audioDataUri) {
     throw new Error('Audio data is missing.');
@@ -34,7 +37,7 @@ export async function processUserAudio({
   // 1. Transcribe audio
   const { transcript } = await transcribeAudio({ audioDataUri, language });
   if (!transcript) {
-    return { id: null, transcript: null, detectedEmotion: null, error: 'silent' };
+    return { error: 'silent' };
   }
 
   // 2. Detect emotion
@@ -42,68 +45,54 @@ export async function processUserAudio({
   if (!detectedEmotion) {
     throw new Error('Emotion detection failed.');
   }
+  
+  const fullConversationHistory = [...conversationHistory, { role: 'user', content: transcript }];
 
-  // 3. Save initial session to Firestore
-  const sessionRef = await addDoc(collection(firestore, 'sessions'), {
-    uid,
-    timestamp: serverTimestamp(),
-    audio_transcript: transcript,
-    detected_emotion: detectedEmotion,
-    ai_response_text: '', // Initially empty
-    ai_response_audio_uri: '', // Initially empty
+  // 3. Generate Chill Chacha response text
+  const { supportiveResponse: aiResponseText } = await generateSupportiveResponse({
+    currentTranscript: transcript,
+    detectedEmotion,
+    conversationHistory: fullConversationHistory,
+    language,
   });
-
-  return { id: sessionRef.id, transcript, detectedEmotion, error: null };
-}
-
-// Step 2: Generate AI response and update the session
-export async function generateAndSaveChachaResponse({
-  sessionId,
-  conversationHistory,
-  language,
-}: {
-  sessionId: string;
-  conversationHistory: Turn[];
-  language: string;
-}) {
-  const sessionDocRef = doc(firestore, 'sessions', sessionId);
-  const sessionDoc = await getDoc(sessionDocRef);
-
-  if (!sessionDoc.exists()) {
-    throw new Error('Session not found.');
-  }
-
-  const { audio_transcript: currentTranscript, detected_emotion: detectedEmotion } = sessionDoc.data();
-
-  // 1. Generate Chill Chacha response text using the flow
-  const { supportiveResponse: supportiveResponseText } =
-    await generateSupportiveResponse({
-      currentTranscript,
-      detectedEmotion,
-      conversationHistory,
-      language,
-    });
-
-  if (!supportiveResponseText) {
+   if (!aiResponseText) {
     throw new Error('Response generation failed.');
   }
 
-  // 2. Generate audio from the response text
-  const { audioDataUri: responseAudioUri } = await textToSpeech({
-    text: supportiveResponseText,
-  });
-
-  if (!responseAudioUri) {
-    throw new Error('Text-to-speech conversion failed.');
+  // 4. Conditionally generate audio for the response
+  let aiResponseAudioUri: string | undefined = undefined;
+  if (responseMode === 'voice') {
+      try {
+        const { audioDataUri } = await textToSpeech({ text: aiResponseText });
+        aiResponseAudioUri = audioDataUri;
+      } catch (e) {
+        console.error("Text-to-speech conversion failed:", e);
+        // We can continue without audio
+      }
   }
 
-  // 3. Update session with AI response text and audio URI
-  await updateDoc(sessionDocRef, {
-    ai_response_text: supportiveResponseText,
-    ai_response_audio_uri: responseAudioUri,
-  });
-
-  return { success: true };
+  // 5. Create new session object for the UI and database
+  const newSessionTurn: Omit<Session, 'id' | 'timestamp'> = {
+    uid,
+    audio_transcript: transcript,
+    detected_emotion: detectedEmotion,
+    ai_response_text: aiResponseText,
+    ai_response_audio_uri: aiResponseAudioUri,
+  };
+  
+  // 6. Save to Firestore in the background
+  addDoc(collection(firestore, 'sessions'), {
+    ...newSessionTurn,
+    timestamp: serverTimestamp(),
+  }).catch(console.error);
+  
+  // 7. Return the full turn data to the client for immediate UI update
+  return {
+    id: crypto.randomUUID(), // A temporary ID for React key
+    ...newSessionTurn,
+    timestamp: new Date(), // Use client-side date for optimistic update
+    error: null,
+  };
 }
 
 
