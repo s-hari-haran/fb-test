@@ -3,8 +3,8 @@
   "short_name": "Chacha",
   "start_url": ".",
   "display": "standalone",
-  "background_color": "#f0f4f8",
-  "theme_color": "#3b82f6",
+  "background_color": "#ffffff",
+  "theme_color": "#2196F3",
   "description": "An AI mental health assistant that works offline.",
   "icons": [
     {

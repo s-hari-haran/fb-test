@@ -1,7 +1,6 @@
-
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import type { Session } from '@/lib/types';
 import { handleUserTurn, summarizeConversationAction } from '@/app/actions';
 import AudioRecorder from '@/components/audio-recorder';
@@ -22,7 +21,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import SummarySidebar from '@/components/summary-sidebar';
 import { firestore } from '@/lib/firebase';
-import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
 
 const languages = [
   { value: 'en-US', label: 'English (US)' },
@@ -49,6 +48,7 @@ export default function Home() {
   const [deviceId, setDeviceId] = useState<string | null>(null);
   const { toast } = useToast();
   const conversationEndRef = useRef<HTMLDivElement>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   // Load deviceId, language, and response mode from local storage on initial mount
   useEffect(() => {
@@ -76,9 +76,6 @@ export default function Home() {
   // Subscribe to Firestore for conversation updates
   useEffect(() => {
     if (deviceId) {
-      // The compound query with `orderBy` on a different field than `where`
-      // requires a composite index in Firestore. Removing `orderBy` to prevent
-      // errors if the index is not created. We will sort on the client side.
       const q = query(
         collection(firestore, 'sessions'),
         where('uid', '==', deviceId)
@@ -110,7 +107,7 @@ export default function Home() {
         setConversation(sessions);
       }, (error) => {
         console.error("Firestore snapshot error:", error);
-        toast({ variant: "destructive", title: "Connection Error", description: "Could not fetch session history." });
+        toast({ variant: "destructive", title: "Connection Error", description: "Could not fetch session history. Please check your internet connection and Firebase setup." });
       });
 
       return () => unsubscribe();
@@ -121,6 +118,20 @@ export default function Home() {
   useEffect(() => {
     conversationEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [conversation]);
+
+  const playAudio = useCallback((audioUri: string) => {
+    if (audioRef.current) {
+      audioRef.current.src = audioUri;
+      audioRef.current.play().catch(e => {
+        console.error("Audio playback failed:", e);
+        toast({
+          variant: 'destructive',
+          title: 'Audio Playback Error',
+          description: 'Could not play audio automatically. Please click the play button.',
+        });
+      });
+    }
+  }, [toast]);
   
   const handleLanguageChange = (newLanguage: string) => {
     setLanguage(newLanguage);
@@ -170,11 +181,6 @@ export default function Home() {
         responseMode
       });
       
-      // Replace the processing bubble with the actual result
-       setConversation(prev => 
-         prev.map(turn => turn.id === tempProcessingTurnId ? { ...result, id: result.id || tempProcessingTurnId } as Session : turn)
-       );
-
       if (result.error === 'silent') {
         toast({
           title: "I didn't hear anything, beta.",
@@ -182,12 +188,23 @@ export default function Home() {
         });
         // Remove the processing bubble if silent
         setConversation(prev => prev.filter(turn => turn.id !== tempProcessingTurnId));
-      } else if (result.error) {
-          toast({
-              variant: "destructive",
-              title: "Voice Generation Failed",
-              description: result.error,
-          });
+      } else {
+        // Replace the processing bubble with the actual result
+        setConversation(prev => 
+            prev.map(turn => turn.id === tempProcessingTurnId ? { ...result, id: result.id || tempProcessingTurnId } as Session : turn)
+        );
+
+        if (result.ai_response_audio_uri) {
+            playAudio(result.ai_response_audio_uri);
+        }
+
+        if (result.error) {
+            toast({
+                variant: "destructive",
+                title: "Voice Generation Failed",
+                description: result.error,
+            });
+        }
       }
 
     } catch (error) {
@@ -232,6 +249,7 @@ export default function Home() {
 
   return (
     <SidebarProvider>
+      <audio ref={audioRef} className="hidden" />
       <SummarySidebar
         summary={summary}
         onSummarize={handleSummarize}

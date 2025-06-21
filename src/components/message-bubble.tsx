@@ -1,11 +1,12 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { User, Smile, Frown, Meh, Angry, Dna, Rocket, Loader2, BrainCircuit } from "lucide-react";
+import { User, Smile, Frown, Meh, Angry, Dna, Rocket, Loader2, BrainCircuit, Play } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import React, { type ReactNode, useEffect, useRef } from "react";
+import React, { type ReactNode } from "react";
 import ChachaLogo from './ChachaLogo';
+import { Button } from "./ui/button";
 
 type Message = {
   role: 'user' | 'ai';
@@ -48,15 +49,35 @@ const EmotionBadge = ({ emotion }: { emotion: string }) => {
     );
 };
 
+const AudioPlayer = ({ audioUri }: { audioUri: string }) => {
+  const audioRef = React.useRef<HTMLAudioElement>(null);
+
+  const handlePlay = () => {
+    audioRef.current?.play();
+  };
+  
+  // Auto-play the audio when the component mounts
+  React.useEffect(() => {
+    if (audioRef.current) {
+        audioRef.current.play().catch(e => console.error("Audio auto-play failed, user interaction needed.", e));
+    }
+  }, []);
+
+  return (
+    <div className="mt-3 flex items-center gap-2">
+       <audio ref={audioRef} src={audioUri} preload="auto" />
+       <Button variant="outline" size="icon" className="w-8 h-8 rounded-full" onClick={handlePlay}>
+        <Play className="w-4 h-4" />
+        <span className="sr-only">Play audio</span>
+      </Button>
+       <p className="text-xs text-muted-foreground">Chacha's voice</p>
+    </div>
+  );
+};
+
+
 export default function MessageBubble({ message, emotion }: MessageBubbleProps) {
   const isUser = message.role === 'user';
-  const audioRef = useRef<HTMLAudioElement>(null);
-  
-  useEffect(() => {
-    if (message.audioUri && audioRef.current) {
-      audioRef.current.play().catch(e => console.error("Audio playback failed:", e));
-    }
-  }, [message.audioUri]);
   
   const bubbleClasses = cn(
     'flex items-start gap-4 max-w-[85%]',
@@ -96,11 +117,7 @@ export default function MessageBubble({ message, emotion }: MessageBubbleProps) 
             ) : (
                 content
             )}
-            {message.audioUri && (
-                <audio ref={audioRef} controls src={message.audioUri} className="w-full mt-3 h-10">
-                    Your browser does not support the audio element.
-                </audio>
-            )}
+            {message.audioUri && <AudioPlayer audioUri={message.audioUri} />}
         </CardContent>
       </Card>
     </div>
