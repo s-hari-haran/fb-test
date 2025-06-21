@@ -1,6 +1,5 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getFirestore, enableIndexedDbPersistence } from 'firebase/firestore';
-import { getAuth, onAuthStateChanged, signInAnonymously } from 'firebase/auth';
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -13,7 +12,6 @@ const firebaseConfig = {
 
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 const firestore = getFirestore(app);
-const auth = getAuth(app);
 
 if (typeof window !== 'undefined') {
     enableIndexedDbPersistence(firestore).catch((err) => {
@@ -25,4 +23,4 @@ if (typeof window !== 'undefined') {
     });
 }
 
-export { app, firestore, auth, onAuthStateChanged, signInAnonymously };
+export { app, firestore };

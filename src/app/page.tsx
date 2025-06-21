@@ -11,9 +11,8 @@ import { Languages } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import SummarySidebar from '@/components/summary-sidebar';
-import { auth, firestore, onAuthStateChanged, signInAnonymously } from '@/lib/firebase';
+import { firestore } from '@/lib/firebase';
 import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
-import type { User } from 'firebase/auth';
 
 export default function Home() {
   const [conversation, setConversation] = useState<Session[]>([]);
@@ -21,29 +20,24 @@ export default function Home() {
   const [language, setLanguage] = useState('en-US');
   const [summary, setSummary] = useState('');
   const [isSummarizing, setIsSummarizing] = useState(false);
-  const [user, setUser] = useState<User | null>(null);
+  const [deviceId, setDeviceId] = useState<string | null>(null);
   const { toast } = useToast();
   const conversationEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      if (currentUser) {
-        setUser(currentUser);
-      } else {
-        signInAnonymously(auth).catch((error) => {
-          console.error("Anonymous sign-in failed", error);
-          toast({ variant: "destructive", title: "Authentication Failed", description: "Could not sign you in. Some features might not work." });
-        });
-      }
-    });
-    return () => unsubscribe();
-  }, [toast]);
+    let id = localStorage.getItem('chillchacha-device-id');
+    if (!id) {
+      id = crypto.randomUUID();
+      localStorage.setItem('chillchacha-device-id', id);
+    }
+    setDeviceId(id);
+  }, []);
 
   useEffect(() => {
-    if (user) {
+    if (deviceId) {
       const q = query(
         collection(firestore, 'sessions'),
-        where('uid', '==', user.uid),
+        where('uid', '==', deviceId),
         orderBy('timestamp', 'asc')
       );
 
@@ -61,25 +55,28 @@ export default function Home() {
           });
         });
         setConversation(sessions);
+      }, (error) => {
+        console.error("Firestore snapshot error:", error);
+        toast({ variant: "destructive", title: "Connection Error", description: "Could not fetch previous sessions." });
       });
 
       return () => unsubscribe();
     }
-  }, [user]);
+  }, [deviceId, toast]);
 
   useEffect(() => {
     conversationEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [conversation]);
 
   const handleRecordingComplete = async (audioDataUri: string) => {
-    if (!user) {
-      toast({ variant: "destructive", title: "Not Signed In", description: "You must be signed in to record a session." });
+    if (!deviceId) {
+      toast({ variant: "destructive", title: "Error", description: "Could not identify your device. Please try refreshing." });
       return;
     }
     setIsProcessing(true);
     setSummary('');
     try {
-      await recordAndAnalyzeAudio({ uid: user.uid, audioDataUri, language });
+      await recordAndAnalyzeAudio({ uid: deviceId, audioDataUri, language });
       // State will be updated by Firestore listener
     } catch (error) {
       console.error(error);
@@ -102,7 +99,6 @@ export default function Home() {
     }
     setIsSummarizing(true);
     try {
-      // Pass the updated session type to the action
       const result = await summarizeConversationAction(conversation);
       if (result) {
         setSummary(result.summary);
