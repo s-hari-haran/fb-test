@@ -76,10 +76,12 @@ export default function Home() {
   // Subscribe to Firestore for conversation updates
   useEffect(() => {
     if (deviceId) {
+      // The compound query with `orderBy` on a different field than `where`
+      // requires a composite index in Firestore. Removing `orderBy` to prevent
+      // errors if the index is not created. We will sort on the client side.
       const q = query(
         collection(firestore, 'sessions'),
-        where('uid', '==', deviceId),
-        orderBy('timestamp', 'asc')
+        where('uid', '==', deviceId)
       );
 
       const unsubscribe = onSnapshot(q, (querySnapshot) => {
@@ -95,6 +97,15 @@ export default function Home() {
             ai_response_text: data.ai_response_text,
             ai_response_audio_uri: data.ai_response_audio_uri,
           });
+        });
+        // Sort sessions by timestamp client-side
+        sessions.sort((a, b) => {
+            if (a.timestamp && b.timestamp) {
+                return a.timestamp.getTime() - b.timestamp.getTime();
+            }
+            if (a.timestamp) return 1;
+            if (b.timestamp) return -1;
+            return 0;
         });
         setConversation(sessions);
       }, (error) => {
