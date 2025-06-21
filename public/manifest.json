@@ -1,17 +1,11 @@
 
 {
-  "name": "InnerSight",
-  "short_name": "InnerSight",
+  "name": "ChillChacha",
+  "short_name": "Chacha",
   "description": "An AI mental health assistant that works offline.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#EBEFF4",
+  "background_color": "#E9EAEF",
   "theme_color": "#2196F3",
-  "icons": [
-    {
-      "src": "/icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml"
-    }
-  ]
+  "icons": []
 }
