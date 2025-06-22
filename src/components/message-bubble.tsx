@@ -112,6 +112,7 @@ export default function MessageBubble({ message, emotion }: MessageBubbleProps) 
             </CardHeader>
         )}
         <CardContent className={cn("p-4 text-base", emotion && 'pt-1')}>
+            {/* THIS IS THE PART THAT PRINTS THE TEXT CONTENT TO THE SCREEN */}
             {typeof content === 'string' ? (
                  <p className="whitespace-pre-wrap">{content}</p>
             ) : (

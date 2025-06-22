@@ -38,6 +38,8 @@ export default function ConversationView({ conversation }: ConversationViewProps
       </AnimatePresence>
 
       <AnimatePresence initial={false}>
+        {/* We loop through the 'conversation' array here. */}
+        {/* For each turn in the conversation, we render a MessageBubble. */}
         {conversation.map((turn, index) => (
            <motion.div
             key={turn.id}

@@ -189,7 +189,8 @@ export default function Home() {
         // Remove the processing bubble if silent
         setConversation(prev => prev.filter(turn => turn.id !== tempProcessingTurnId));
       } else {
-        // Replace the processing bubble with the actual result
+        // Here is where the conversation state is updated with the real AI response.
+        // This causes React to re-render the components with the new data.
         setConversation(prev => 
             prev.map(turn => turn.id === tempProcessingTurnId ? { ...result, id: result.id || tempProcessingTurnId } as Session : turn)
         );
@@ -286,6 +287,7 @@ export default function Home() {
 
           <main className="flex-1 overflow-y-auto p-4">
             <div className="max-w-4xl mx-auto">
+              {/* This is where the conversation data is passed to the view component for rendering. */}
               <ConversationView conversation={conversation} />
               <div ref={conversationEndRef} />
             </div>
