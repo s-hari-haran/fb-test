@@ -5,24 +5,30 @@ import MessageBubble from './message-bubble';
 import { Card, CardContent } from '@/components/ui/card';
 import { motion, AnimatePresence } from 'framer-motion';
 import ChachaLogo from './ChachaLogo';
+import { Badge } from '@/components/ui/badge';
 
 type ConversationViewProps = {
   conversation: Session[];
 };
 
 const WelcomeMessage = () => (
-  <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-    <Card className="shadow-md border-primary/20 bg-card/50 mb-8">
-      <CardContent className="p-6 text-center">
-        <ChachaLogo className="w-16 h-16 mx-auto mb-4" />
-        <h2 className="text-2xl font-bold text-foreground mb-2">Welcome to ChillChacha</h2>
-        <p className="text-muted-foreground">
-          Your personal space for reflection. Tap the microphone below to start a new entry whenever you're ready.
-        </p>
-      </CardContent>
-    </Card>
-  </motion.div>
-);
+    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
+      <Card className="shadow-md border-primary/20 bg-card/50 mb-8">
+        <CardContent className="p-6 text-center">
+          <ChachaLogo className="w-16 h-16 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-foreground mb-2">Welcome to ChillChacha</h2>
+          <p className="text-muted-foreground max-w-md mx-auto">
+            Your personal space for reflection. Tap the microphone to talk about what's on your mind.
+          </p>
+          <div className="mt-6 flex flex-wrap justify-center gap-2">
+              <Badge variant="secondary" className="cursor-default">"I had a long day..."</Badge>
+              <Badge variant="secondary" className="cursor-default">"Something is bothering me..."</Badge>
+              <Badge variant="secondary" className="cursor-default">"I have some good news!"</Badge>
+          </div>
+        </CardContent>
+      </Card>
+    </motion.div>
+  );
 
 export default function ConversationView({ conversation }: ConversationViewProps) {
   return (
