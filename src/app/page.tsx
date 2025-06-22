@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
@@ -48,7 +49,6 @@ export default function Home() {
   const [deviceId, setDeviceId] = useState<string | null>(null);
   const { toast } = useToast();
   const conversationEndRef = useRef<HTMLDivElement>(null);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   // Load deviceId, language, and response mode from local storage on initial mount
   useEffect(() => {
@@ -118,20 +118,6 @@ export default function Home() {
   useEffect(() => {
     conversationEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [conversation]);
-
-  const playAudio = useCallback((audioUri: string) => {
-    if (audioRef.current) {
-      audioRef.current.src = audioUri;
-      audioRef.current.play().catch(e => {
-        console.error("Audio playback failed:", e);
-        toast({
-          variant: 'destructive',
-          title: 'Audio Playback Error',
-          description: 'Could not play audio automatically. Please click the play button.',
-        });
-      });
-    }
-  }, [toast]);
   
   const handleLanguageChange = (newLanguage: string) => {
     setLanguage(newLanguage);
@@ -195,10 +181,6 @@ export default function Home() {
             prev.map(turn => turn.id === tempProcessingTurnId ? { ...result, id: result.id || tempProcessingTurnId } as Session : turn)
         );
 
-        if (result.ai_response_audio_uri) {
-            playAudio(result.ai_response_audio_uri);
-        }
-
         if (result.error) {
             toast({
                 variant: "destructive",
@@ -250,7 +232,6 @@ export default function Home() {
 
   return (
     <SidebarProvider>
-      <audio ref={audioRef} className="hidden" />
       <SummarySidebar
         summary={summary}
         onSummarize={handleSummarize}
@@ -287,7 +268,6 @@ export default function Home() {
 
           <main className="flex-1 overflow-y-auto p-4">
             <div className="max-w-4xl mx-auto">
-              {/* This is where the conversation data is passed to the view component for rendering. */}
               <ConversationView conversation={conversation} />
               <div ref={conversationEndRef} />
             </div>

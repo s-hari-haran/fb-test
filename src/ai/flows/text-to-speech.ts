@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview A text-to-speech AI agent.
@@ -68,7 +69,7 @@ const textToSpeechFlow = ai.defineFlow(
         responseModalities: ['AUDIO'],
         speechConfig: {
           voiceConfig: {
-            prebuiltVoiceConfig: { voiceName: 'Tak' },
+            prebuiltVoiceConfig: { voiceName: 'Algenib' },
           },
         },
         safetySettings: [

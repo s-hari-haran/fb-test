@@ -1,3 +1,4 @@
+
 'use client';
 
 import type { Session } from '@/lib/types';
@@ -38,20 +39,20 @@ export default function ConversationView({ conversation }: ConversationViewProps
       </AnimatePresence>
 
       <AnimatePresence initial={false}>
-        {/* We loop through the 'conversation' array here. */}
-        {/* For each turn in the conversation, we render a MessageBubble. */}
-        {conversation.map((turn, index) => (
+        {conversation.map((turn) => (
            <motion.div
             key={turn.id}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.1 * index }}
+            transition={{ duration: 0.5 }}
            >
             <div className="space-y-6">
+              {/* This is where the user's message is rendered. */}
               <MessageBubble
                 message={{ role: 'user', content: turn.audio_transcript }}
                 emotion={turn.detected_emotion}
               />
+              {/* This is where Chacha's response is rendered. */}
               {turn.ai_response_text && (
                 <MessageBubble
                   message={{ role: 'ai', content: turn.ai_response_text, audioUri: turn.ai_response_audio_uri }}
