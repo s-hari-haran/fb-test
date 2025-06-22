@@ -2,14 +2,14 @@
 /**
  * @fileOverview A text-to-speech AI agent.
  *
- * - textToSpeech - A function that converts text to speech audio.
+ * - textToSpeech - A function that handles the text-to-speech process.
  * - TextToSpeechInput - The input type for the textToSpeech function.
  * - TextToSpeechOutput - The return type for the textToSpeech function.
  */
 
 import {ai} from '@/ai/genkit';
-import {googleAI} from '@genkit-ai/googleai';
 import {z} from 'genkit';
+import {googleAI} from '@genkit-ai/googleai';
 import wav from 'wav';
 
 const TextToSpeechInputSchema = z.object({
@@ -18,7 +18,9 @@ const TextToSpeechInputSchema = z.object({
 export type TextToSpeechInput = z.infer<typeof TextToSpeechInputSchema>;
 
 const TextToSpeechOutputSchema = z.object({
-  audioDataUri: z.string().describe('The audio data as a data URI.'),
+  audioDataUri: z
+    .string()
+    .describe('The synthesized audio as a data URI.'),
 });
 export type TextToSpeechOutput = z.infer<typeof TextToSpeechOutputSchema>;
 
@@ -59,7 +61,7 @@ const textToSpeechFlow = ai.defineFlow(
     inputSchema: TextToSpeechInputSchema,
     outputSchema: TextToSpeechOutputSchema,
   },
-  async ({ text }) => {
+  async ({text}) => {
     const { media } = await ai.generate({
       model: googleAI.model('gemini-2.5-flash-preview-tts'),
       config: {
@@ -71,11 +73,11 @@ const textToSpeechFlow = ai.defineFlow(
         },
         safetySettings: [
             {
-              category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
+              category: 'HARM_CATEGORY_HATE_SPEECH',
               threshold: 'BLOCK_NONE',
             },
             {
-              category: 'HARM_CATEGORY_HATE_SPEECH',
+              category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
               threshold: 'BLOCK_NONE',
             },
             {
@@ -86,24 +88,24 @@ const textToSpeechFlow = ai.defineFlow(
               category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
               threshold: 'BLOCK_NONE',
             },
-        ]
+          ],
       },
       prompt: text,
     });
 
     if (!media) {
-      throw new Error('No audio media returned from TTS model.');
+      throw new Error('No audio media returned from TTS service.');
     }
-
-    const audioBuffer = Buffer.from(
+    
+    const pcmData = Buffer.from(
       media.url.substring(media.url.indexOf(',') + 1),
       'base64'
     );
-
-    const wavBase64 = await toWav(audioBuffer);
+    
+    const wavBase64 = await toWav(pcmData);
 
     return {
-      audioDataUri: 'data:audio/wav;base64,' + wavBase64,
+      audioDataUri: `data:audio/wav;base64,${wavBase64}`,
     };
   }
 );
